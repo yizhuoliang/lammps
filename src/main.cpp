@@ -16,6 +16,7 @@
 
 #include <mpi.h>
 #include <cstdlib>
+#include <stdio.h>
 
 #if defined(LAMMPS_TRAP_FPE) && defined(_GNU_SOURCE)
 #include <fenv.h>
@@ -25,45 +26,56 @@
 #include "exceptions.h"
 #endif
 
+#include <faasm/faasm.h>
+#include <faasm/migrate.h>
+
 using namespace LAMMPS_NS;
 
-/* ----------------------------------------------------------------------
-   main program to drive LAMMPS
-------------------------------------------------------------------------- */
+int globalArgc = -1;
+char** globalArgv = nullptr;
+int totalNumLoops = 2;
+LAMMPS* lammps = nullptr;
+
+void doLammps()
+{
+    if (lammps != nullptr) {
+        lammps->input->file();
+    } else {
+        printf("Error! LAMMPS is a nullptr!\n");
+    }
+}
+
+void doBenchmark(int nLoops)
+{
+    bool mustCheck = nLoops == totalNumLoops;
+
+    if (globalArgc == -1 || globalArgv == nullptr) {
+        printf("Error! LAMMPS is a nullptr!\n");
+    }
+    MPI_Init(&globalArgc, &globalArgv);
+    lammps = new LAMMPS(globalArgc, globalArgv, MPI_COMM_WORLD);
+
+    for (int i = 0; i < nLoops; i++) {
+        doLammps();
+        if (mustCheck) {
+            MPI_Barrier(MPI_COMM_WORLD);
+#ifdef __faasm
+            __faasm_migrate_point(&doBenchmark, (nLoops - i - 1));
+#endif
+        }
+    }
+
+    delete lammps;
+    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Finalize();
+}
 
 int main(int argc, char **argv)
 {
-  MPI_Init(&argc,&argv);
+    // Persist argc and argv as global variables to not change the signature
+    // of the `doBenchmark` method
+    globalArgv = argv;
+    globalArgc = argc;
 
-// enable trapping selected floating point exceptions.
-// this uses GNU extensions and is only tested on Linux
-// therefore we make it depend on -D_GNU_SOURCE, too.
-
-#if defined(LAMMPS_TRAP_FPE) && defined(_GNU_SOURCE)
-  fesetenv(FE_NOMASK_ENV);
-  fedisableexcept(FE_ALL_EXCEPT);
-  feenableexcept(FE_DIVBYZERO);
-  feenableexcept(FE_INVALID);
-  feenableexcept(FE_OVERFLOW);
-#endif
-
-#ifdef LAMMPS_EXCEPTIONS
-  try {
-    LAMMPS *lammps = new LAMMPS(argc,argv,MPI_COMM_WORLD);
-    lammps->input->file();
-    delete lammps;
-  } catch(LAMMPSAbortException &ae) {
-    MPI_Abort(ae.universe, 1);
-  } catch(LAMMPSException &e) {
-    MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Finalize();
-    exit(1);
-  }
-#else
-  LAMMPS *lammps = new LAMMPS(argc,argv,MPI_COMM_WORLD);
-  lammps->input->file();
-  delete lammps;
-#endif
-  MPI_Barrier(MPI_COMM_WORLD);
-  MPI_Finalize();
+    doBenchmark(2);
 }
