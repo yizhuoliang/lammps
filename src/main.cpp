@@ -26,8 +26,10 @@
 #include "exceptions.h"
 #endif
 
+#ifdef __faasm
 #include <faasm/faasm.h>
 #include <faasm/migrate.h>
+#endif
 
 using namespace LAMMPS_NS;
 
@@ -53,19 +55,30 @@ void doBenchmark(int nLoops)
         printf("Error! LAMMPS is a nullptr!\n");
     }
     MPI_Init(&globalArgc, &globalArgv);
-    lammps = new LAMMPS(globalArgc, globalArgv, MPI_COMM_WORLD);
+
+    // Get rank
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
     for (int i = 0; i < nLoops; i++) {
+        lammps = new LAMMPS(globalArgc, globalArgv, MPI_COMM_WORLD);
         doLammps();
-        if (mustCheck) {
+        if (mustCheck && i == 0) {
+#ifdef __faasm
+            if (rank == 0) {
+                printf("---------------------------------------------------\n");
+                printf("LAMMPS-Migrate checking for migration opportunities\n");
+                printf("---------------------------------------------------\n");
+            }
+#endif
             MPI_Barrier(MPI_COMM_WORLD);
 #ifdef __faasm
             __faasm_migrate_point(&doBenchmark, (nLoops - i - 1));
 #endif
         }
+        delete lammps;
     }
 
-    delete lammps;
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Finalize();
 }
