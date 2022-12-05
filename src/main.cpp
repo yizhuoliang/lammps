@@ -58,9 +58,17 @@ void doBenchmark(int nLoops)
 
     // Get rank
     int rank;
+    int worldSize;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &worldSize);
 
     for (int i = 0; i < nLoops; i++) {
+        // Barrier to make sure all ranks are in sync (including those that
+        // have been migrated)
+        // printf("Rank %i/%i entering first barrier!\n", rank, worldSize);
+        MPI_Barrier(MPI_COMM_WORLD);
+        // printf("Rank %i/%i exitting first barrier!\n", rank, worldSize);
+
         lammps = new LAMMPS(globalArgc, globalArgv, MPI_COMM_WORLD);
         doLammps();
         if (mustCheck && i == 0) {
@@ -71,7 +79,9 @@ void doBenchmark(int nLoops)
                 printf("---------------------------------------------------\n");
             }
 #endif
+            // printf("Rank %i/%i entering second barrier!\n", rank, worldSize);
             MPI_Barrier(MPI_COMM_WORLD);
+            // printf("Rank %i/%i entering second barrier!\n", rank, worldSize);
 #ifdef __faasm
             __faasm_migrate_point(&doBenchmark, (nLoops - i - 1));
 #endif
