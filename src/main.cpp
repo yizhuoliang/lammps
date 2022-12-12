@@ -17,6 +17,8 @@
 #include <mpi.h>
 #include <cstdlib>
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 
 #if defined(LAMMPS_TRAP_FPE) && defined(_GNU_SOURCE)
 #include <fenv.h>
@@ -36,6 +38,7 @@ using namespace LAMMPS_NS;
 int globalArgc = -1;
 char** globalArgv = nullptr;
 int totalNumLoops = 2;
+int checkEvery = 1;
 LAMMPS* lammps = nullptr;
 
 void doLammps()
@@ -71,7 +74,8 @@ void doBenchmark(int nLoops)
 
         lammps = new LAMMPS(globalArgc, globalArgv, MPI_COMM_WORLD);
         doLammps();
-        if (mustCheck && i == 0) {
+        // if (mustCheck && i == 0) {
+        if (mustCheck && i % checkEvery == 0 && i / checkEvery > 0) {
 #ifdef __faasm
             if (rank == 0) {
                 printf("---------------------------------------------------\n");
@@ -100,5 +104,25 @@ int main(int argc, char **argv)
     globalArgv = argv;
     globalArgc = argc;
 
-    doBenchmark(2);
+    long inputSize = faasmGetInputSize();
+    uint8_t* inputBuffer = (uint8_t*) malloc(inputSize * sizeof(uint8_t));
+    faasmGetInput(inputBuffer, inputSize);
+
+    int checkEveryIn = atoi(strtok((char*) inputBuffer, " "));
+    int numLoopsIn = atoi(strtok(NULL, " "));
+    printf("Received input parameters-> checkEveryIn: %i - numLoops: %i\n", checkEveryIn, numLoopsIn);
+
+    // Filthy hack to set the check period without modifying the function
+    // signature. Note that the migrated functions won't see the updated
+    // value as we don't migrate global variables, but that's OK as we don't
+    // support migrating a function twice.
+    int* numTotalLoopsPtr = &totalNumLoops;
+    *numTotalLoopsPtr = numLoopsIn;
+    int* checkEveryPtr = &checkEvery;
+    *checkEveryPtr = (int)(totalNumLoops * ((float)checkEveryIn / 10.0));
+
+    printf(
+      "Starting MPI migration checking at iter %i/%i\n", checkEvery, totalNumLoops);
+
+    doBenchmark(totalNumLoops);
 }
