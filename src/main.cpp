@@ -104,6 +104,7 @@ int main(int argc, char **argv)
     globalArgv = argv;
     globalArgc = argc;
 
+#ifdef __faasm
     long inputSize = faasmGetInputSize();
     uint8_t* inputBuffer = (uint8_t*) malloc(inputSize * sizeof(uint8_t));
     faasmGetInput(inputBuffer, inputSize);
@@ -123,6 +124,7 @@ int main(int argc, char **argv)
 
     printf(
       "Starting MPI migration checking at iter %i/%i\n", checkEvery, totalNumLoops);
+#endif
 
     doBenchmark(totalNumLoops);
 }
