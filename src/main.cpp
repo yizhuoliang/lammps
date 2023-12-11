@@ -74,7 +74,7 @@ void doBenchmark(int nLoops)
 
         lammps = new LAMMPS(globalArgc, globalArgv, MPI_COMM_WORLD);
         doLammps();
-        if (mustCheck && ((i + 1)  == checkEvery) && ((i + 1) != totalNumLoops)) {
+        if (mustCheck && ((i + 1)  % checkEvery == 0) && ((i + 1) != totalNumLoops)) {
 #ifdef __faasm
             if (rank == 0) {
                 printf("---------------------------------------------------\n");
@@ -106,7 +106,6 @@ int main(int argc, char **argv)
 #ifdef __faasm
     long inputSize = faasmGetInputSize();
     uint8_t* inputBuffer = (uint8_t*) malloc(inputSize * sizeof(uint8_t));
-    printf("input size: %li\n", inputSize);
     faasmGetInput(inputBuffer, inputSize);
 
     char* inputStr = (char*) inputBuffer;
@@ -123,7 +122,7 @@ int main(int argc, char **argv)
     *checkEveryPtr = checkEveryIn;
 
     printf(
-      "Starting MPI migration checking at iter %i/%i\n", checkEvery, totalNumLoops);
+      "Starting MPI migration v2 checking at iter %i/%i\n", checkEvery, totalNumLoops);
 #endif
 
     doBenchmark(totalNumLoops);
