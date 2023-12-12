@@ -37,7 +37,7 @@ using namespace LAMMPS_NS;
 
 int globalArgc = -1;
 char** globalArgv = nullptr;
-int totalNumLoops = 2;
+int totalNumLoops = 3;
 int checkEvery = 1;
 LAMMPS* lammps = nullptr;
 
