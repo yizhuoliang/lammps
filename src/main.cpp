@@ -120,10 +120,9 @@ int main(int argc, char **argv)
     *numTotalLoopsPtr = numLoopsIn;
     int* checkEveryPtr = &checkEvery;
     *checkEveryPtr = checkEveryIn;
-
+#endif
     printf(
       "Starting MPI migration v2 checking at iter %i/%i\n", checkEvery, totalNumLoops);
-#endif
 
     doBenchmark(totalNumLoops);
 }
