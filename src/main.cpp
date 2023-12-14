@@ -38,6 +38,10 @@ using namespace LAMMPS_NS;
 int globalArgc = -1;
 char** globalArgv = nullptr;
 int totalNumLoops = 3;
+// WARNING: if we want to check more than once, and use a total number of loops
+// greater than 2, we **need** to set checkEvery to 1. This is because, if we
+// use a user provided value (and we modify the global variable), this changes
+// won't be persisted across migrations.
 int checkEvery = 1;
 LAMMPS* lammps = nullptr;
 
@@ -52,7 +56,7 @@ void doLammps()
 
 void doBenchmark(int nLoops)
 {
-    bool mustCheck = nLoops == totalNumLoops;
+    // bool mustCheck = nLoops == totalNumLoops;
 
     if (globalArgc == -1 || globalArgv == nullptr) {
         printf("Error! LAMMPS is a nullptr!\n");
@@ -68,13 +72,18 @@ void doBenchmark(int nLoops)
     for (int i = 0; i < nLoops; i++) {
         // Barrier to make sure all ranks are in sync (including those that
         // have been migrated)
-        // printf("Rank %i/%i entering first barrier!\n", rank, worldSize);
+        printf("Rank %i/%i executing loop %i\%i\n", rank, worldSize, i + 1, nLoops);
         MPI_Barrier(MPI_COMM_WORLD);
         // printf("Rank %i/%i exitting first barrier!\n", rank, worldSize);
 
         lammps = new LAMMPS(globalArgc, globalArgv, MPI_COMM_WORLD);
         doLammps();
-        if (mustCheck && ((i + 1)  % checkEvery == 0) && ((i + 1) != totalNumLoops)) {
+        // if (mustCheck && ((i + 1)  % checkEvery == 0) && ((i + 1) != totalNumLoops)) {
+        // Check for migration opportunities if this iteration is a multiple of
+        // check every, and it is not the last iteration. Bear in mind that the
+        // meaning of "last" iteration will vary between migrated and non-
+        // migrated ranks
+        if (((i + 1)  % checkEvery == 0) && ((i + 1) != nLoops)) {
 #ifdef __faasm
             if (rank == 0) {
                 printf("---------------------------------------------------\n");
@@ -82,6 +91,7 @@ void doBenchmark(int nLoops)
                 printf("---------------------------------------------------\n");
             }
 #endif
+            printf("Rank %i/%i in mig. check branch (iter: %i\%i)\n", rank, worldSize, i + 1, nLoops);
             // printf("Rank %i/%i entering second barrier!\n", rank, worldSize);
             MPI_Barrier(MPI_COMM_WORLD);
             // printf("Rank %i/%i entering second barrier!\n", rank, worldSize);
