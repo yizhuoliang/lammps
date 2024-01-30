@@ -44,6 +44,7 @@ int totalNumLoops = 3;
 // won't be persisted across migrations.
 int checkEvery = 1;
 int numNetLoops = -1;
+int chunkSize = -1;
 LAMMPS* lammps = nullptr;
 
 void doLammps()
@@ -55,9 +56,8 @@ void doLammps()
     }
 }
 
-void doAllToAll(int rank, int worldSize, int nLoops)
+void doAllToAll(int rank, int worldSize, int chunkSize, int nLoops)
 {
-    int chunkSize = 2;
     int fullSize = worldSize * chunkSize;
 
     // Arrays for sending and receiving
@@ -106,7 +106,7 @@ void doBenchmark(int nLoops)
         doLammps();
 
         // Network-intensive part of the benchmark
-        doAllToAll(rank, worldSize, numNetLoops);
+        doAllToAll(rank, worldSize, chunkSize, numNetLoops);
 
         // Check for migration opportunities if this iteration is a multiple of
         // check every, and it is not the last iteration. Bear in mind that the
@@ -153,11 +153,14 @@ int main(int argc, char **argv)
     // - checkEvery: how often do we check for migration opportunities
     // - numNetLoops: how many iterations do we do in the network-bound part
     //                of the main experiment loop
+    // - chunkSize: size of the chunks being exchanged in the network-bound
+    //              benchmark
     //  We pass them separated by a space: "{} {} {}"
     char* inputStr = (char*) inputBuffer;
     int checkEveryIn = atoi(strtok(inputStr, " "));
     int numLoopsIn = atoi(strtok(NULL, " "));
     int numNetLoopsIn = atoi(strtok(NULL, " "));
+    int chunkSizeIn = atoi(strtok(NULL, " "));
 #else
     char* inputStr = getenv("FAASM_BENCH_PARAMS");
 
@@ -167,6 +170,7 @@ int main(int argc, char **argv)
     int numLoopsIn = atoi(strtok(inputStr, ":"));
     int checkEveryIn = numLoopsIn;
     int numNetLoopsIn = atoi(strtok(NULL, ":"));
+    int chunkSizeIn = atoi(strtok(NULL, ":"));
 #endif
 
     // Hacky way to pass the input data (not LAMMPS argc/arv) to the benchmark
@@ -176,9 +180,11 @@ int main(int argc, char **argv)
     *checkEveryPtr = checkEveryIn;
     int* numNetLoopsPtr = &numNetLoops;
     *numNetLoopsPtr = numNetLoopsIn;
+    int* chunkSizePtr = &chunkSize;
+    *chunkSizePtr = chunkSizeIn;
 
     printf(
-      "Starting MPI migration v3.1 checking at iter %i/%i (%i net loops)\n", checkEvery, totalNumLoops, numNetLoops);
+      "Starting MPI migration v3.2 checking at iter %i/%i (net loops: %i, chunk size: %i))\n", checkEvery, totalNumLoops, numNetLoops, chunkSize);
 
     doBenchmark(totalNumLoops);
 }
