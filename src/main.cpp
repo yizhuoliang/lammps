@@ -156,7 +156,7 @@ int main(int argc, char **argv)
     //  We pass them separated by a space: "{} {} {}"
     char* inputStr = (char*) inputBuffer;
     int checkEveryIn = atoi(strtok(inputStr, " "));
-    int numLoopsIn = atoi(strtok(inputStr, " "));
+    int numLoopsIn = atoi(strtok(NULL, " "));
     int numNetLoopsIn = atoi(strtok(NULL, " "));
 #else
     char* inputStr = getenv("FAASM_BENCH_PARAMS");
@@ -178,7 +178,7 @@ int main(int argc, char **argv)
     *numNetLoopsPtr = numNetLoopsIn;
 
     printf(
-      "Starting MPI migration v3 checking at iter %i/%i (%i net loops)\n", checkEvery, totalNumLoops, numNetLoops);
+      "Starting MPI migration v3.1 checking at iter %i/%i (%i net loops)\n", checkEvery, totalNumLoops, numNetLoops);
 
     doBenchmark(totalNumLoops);
 }
