@@ -120,7 +120,7 @@ void doBenchmark(int nLoops)
                 printf("---------------------------------------------------\n");
             }
 #endif
-            printf("Rank %i/%i in mig. check branch (iter: %i/%i)\n", rank, worldSize, i + 1, nLoops);
+            printf("Rank %i/%i in mig. check branch iter %i/%i  (net loops: %i, chunk size: %i)\n", rank, worldSize, i + 1, nLoops, numNetLoops, chunkSize);
             MPI_Barrier(MPI_COMM_WORLD);
 #ifdef __faasm
             __faasm_migrate_point(&doBenchmark, (nLoops - i - 1));
@@ -184,7 +184,7 @@ int main(int argc, char **argv)
     *chunkSizePtr = chunkSizeIn;
 
     printf(
-      "Starting MPI migration v3.2 checking at iter %i/%i (net loops: %i, chunk size: %i))\n", checkEvery, totalNumLoops, numNetLoops, chunkSize);
+      "Starting MPI migration v3.3 checking at iter %i/%i (net loops: %i, chunk size: %i)\n", checkEvery, totalNumLoops, numNetLoops, chunkSize);
 
     doBenchmark(totalNumLoops);
 }
