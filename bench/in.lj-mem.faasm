@@ -1,30 +1,33 @@
-# 3d Lennard-Jones melt
+# 3d Lennard-Jones melt - Memory Bandwidth Aggressive Variant (High Rate, Moderate Size)
 
-variable	x index 8
-variable	y index 8
-variable	z index 1
+variable    x index 8
+variable    y index 8
+variable    z index 1
 
-variable	xx equal 20*$x
-variable	yy equal 20*$y
-variable	zz equal 20*$z
+variable    xx equal 20*$x
+variable    yy equal 20*$y
+variable    zz equal 20*$z
 
-units		lj
-atom_style	atomic
+units       lj
+atom_style  atomic
 
-lattice		fcc 0.8442
-region		box block 0 ${xx} 0 ${yy} 0 ${zz}
-create_box	1 box
-create_atoms	1 box
-mass		1 1.0
+lattice     fcc 0.8442
+region      box block 0 ${xx} 0 ${yy} 0 ${zz}
+create_box  1 box
+create_atoms 1 box
+mass        1 1.0
 
-velocity	all create 1.44 87287 loop geom
+velocity    all create 1.44 87287 loop geom
 
-pair_style	lj/cut 2.5
-pair_coeff	1 1 1.0 1.0 2.5
+# Increase the cutoff from 2.5 to 4.0 so that more neighbors per atom are included,
+# which raises the per-timestep memory access rate.
+pair_style  lj/cut 4.0
+pair_coeff  1 1 1.0 1.0 4.0
 
-neighbor	0.3 bin
-neigh_modify	delay 0 every 20 check no
+# Force a rebuild of the neighbor list every timestep to re-access large data structures frequently.
+neighbor    0.3 bin
+neigh_modify delay 0 every 1 check yes
 
-fix		1 all nve
+fix         1 all nve
 
-run		100
+run         60
