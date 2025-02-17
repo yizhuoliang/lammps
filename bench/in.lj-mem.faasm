@@ -1,7 +1,7 @@
 # 3d Lennard-Jones melt - Memory Bandwidth Aggressive Variant (High Rate, Moderate Size)
 
-variable    x index 8
-variable    y index 8
+variable    x index 4
+variable    y index 4
 variable    z index 1
 
 variable    xx equal 20*$x
