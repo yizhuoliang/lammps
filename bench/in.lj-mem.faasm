@@ -30,4 +30,4 @@ neigh_modify delay 0 every 1 check yes
 
 fix         1 all nve
 
-run         100
+run         60
